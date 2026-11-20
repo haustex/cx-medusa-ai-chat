@@ -19,7 +19,6 @@ import { fileURLToPath } from "node:url"
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_DIR = path.resolve(HERE, "..")
 const APP_DIR = path.join(HERE, "app")
-const STATE_DIR = path.join(HERE, ".state")
 const GUARD = path.join(PLUGIN_DIR, "scripts/guard.mjs")
 const MEDUSA = path.join(PLUGIN_DIR, "node_modules/.bin/medusa")
 const PACKAGE = "medusa-ai-chat"
@@ -27,6 +26,8 @@ const PACKAGE = "medusa-ai-chat"
 const DB_NAME = process.env.AC_DB || "ac_e2e"
 const PG_CONTAINER = process.env.AC_PG_CONTAINER || "ac-spike-pg"
 const PORT = Number(process.env.AC_PORT || 9800)
+// One state folder per port: a kept demo server (and integration-tests/.state/demo.env) survives a second run
+const STATE_DIR = path.join(HERE, ".state", String(PORT))
 const BASE = `http://127.0.0.1:${PORT}`
 const ADMIN = { email: "admin@e2e.test", password: "e2e-password-123" }
 
@@ -234,6 +235,12 @@ async function checks() {
   c = await chat(session, "hello", { token: "A".repeat(40) })
   check("wrong token → 404", c.status === 404, c.json)
 
+  r = await api("POST", "/store/ai-chat/sessions", { body: { locale: "en", country_code: "us", consent: true }, store: true })
+  const bare = r.json.session
+  c = await chat(bare, "search teak board")
+  const bareCards = c.events.find((e) => e.type === "products")?.items ?? []
+  check("session with only a country still prices products (region resolved server-side)", bareCards.length === 1 && bareCards[0].price === "$20.00 – $30.00", { cards: bareCards, text: c.text })
+
   section("Policies and shipping")
   c = await chat(session, "what is your return policy?")
   check("policy page fetched and used (markdown, locale en)", /14 days of delivery/.test(c.text), c.text)
@@ -278,7 +285,7 @@ async function checks() {
   r = await api("GET", "/store/ai-chat/config?lang=en", { store: true })
   check("config reports over_budget", r.json.over_budget === true, r.json)
   r = await api("GET", "/admin/ai-chat/stats?days=7")
-  check("stats: today's spend > 0, handoffs 2, refused 1, flagged 1, thumbs down 1", r.json.today.cost_usd > 0 && r.json.totals.handoffs === 2 && r.json.totals.refused === 1 && r.json.totals.flagged >= 1 && r.json.totals.feedback_down === 1 && r.json.totals.sessions === 2, r.json)
+  check("stats: today's spend > 0, handoffs 2, refused 1, flagged 1, thumbs down 1", r.json.today.cost_usd > 0 && r.json.totals.handoffs === 2 && r.json.totals.refused === 1 && r.json.totals.flagged >= 1 && r.json.totals.feedback_down === 1 && r.json.totals.sessions === 3, r.json)
   await api("POST", "/admin/ai-chat/settings", { body: { daily_budget_usd: null } })
   await sleep(100)
   r = await api("POST", "/admin/ai-chat/settings", { body: { enabled: false } })
@@ -304,13 +311,13 @@ async function checks() {
   r = await api("GET", "/admin/ai-chat/sessions?q=kebijakan")
   check("sessions text search", r.json.count === 1 && r.json.sessions[0].id === idSession.id && /kebijakan/.test(r.json.sessions[0].first_message), r.json)
   r = await api("GET", "/admin/ai-chat/sessions")
-  check("session list hides token/ip hashes, has summaries", r.json.count === 2 && !("token_hash" in r.json.sessions[0]) && !("ip_hash" in r.json.sessions[0]) && typeof r.json.sessions[0].first_message === "string", r.json.sessions[0])
+  check("session list hides token/ip hashes, has summaries", r.json.count === 3 && !("token_hash" in r.json.sessions[0]) && !("ip_hash" in r.json.sessions[0]) && typeof r.json.sessions[0].first_message === "string", r.json.sessions[0])
   r = await api("GET", `/admin/ai-chat/sessions/${session.id}`)
   check("session detail without hashes, with cost and tokens", !("token_hash" in r.json.session) && r.json.session.cost_usd > 0 && r.json.session.input_tokens > 0, Object.keys(r.json.session))
 
   section("Retention")
   r = await api("POST", "/admin/e2e/jobs", { body: { job: "retention", now: new Date(Date.now() + 31 * 86400_000).toISOString() } })
-  check("retention job removes conversations older than 30 days", r.json.removed === 2, r.json)
+  check("retention job removes conversations older than 30 days", r.json.removed === 3, r.json)
   const rows = psql("SELECT count(*) FROM ai_chat_message", DB_NAME)
   check("messages gone with their sessions", rows === "0", rows)
   r = await api("DELETE", `/admin/ai-chat/sessions/${session.id}`)
@@ -344,7 +351,7 @@ async function main() {
       try {
         if ((await fetch(`${BASE}/health`)).ok) break
       } catch {}
-      if (i > 120) throw new Error("server did not start, see integration-tests/.state/server.log")
+      if (i > 120) throw new Error("server did not start, see integration-tests/.state/<port>/server.log")
       await new Promise((r) => setTimeout(r, 1000))
     }
     await checks()

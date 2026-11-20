@@ -2,11 +2,11 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MedusaError } from "@medusajs/framework/utils"
 import { AI_CHAT_MODULE } from "../../../../modules/ai-chat"
 import type AiChatModuleService from "../../../../modules/ai-chat/service"
-import { clientIpHash, noStore } from "../../../../lib/http"
+import { clientIpHash, noStore, publishableKey } from "../../../../lib/http"
 import { getOptions } from "../../../../lib/options"
 import { providerReady } from "../../../../lib/providers"
 import { take } from "../../../../lib/rate-limit"
-import { cleanPage } from "../../../../lib/sessions"
+import { cleanPage, resolveRegion } from "../../../../lib/sessions"
 import { getSettings } from "../../../../lib/settings"
 import { hashToken, newToken } from "../../../../lib/tokens"
 import { addUsage, dayKey } from "../../../../lib/usage"
@@ -26,13 +26,24 @@ export const POST = async (req: MedusaRequest<StoreCreateSessionType>, res: Medu
   const locale = o.assistant.locales.includes(b.locale.toLowerCase()) ? b.locale.toLowerCase() : o.assistant.locales[0]
   const prefix = o.storefront.path_prefixes.includes(b.path_prefix ?? "") ? (b.path_prefix ?? "") : ""
   const token = newToken()
+  const countryCode = b.country_code ? b.country_code.toLowerCase() : null
+  let regionId = b.region_id && /^reg_[A-Za-z0-9]+$/.test(b.region_id) ? b.region_id : null
+  let currencyCode = b.currency_code ? b.currency_code.toLowerCase() : null
+  if (!regionId) {
+    // Prices need a region: find it from the country (or currency) on our own Store API
+    const region = await resolveRegion(o, publishableKey(req), countryCode, currencyCode)
+    if (region) {
+      regionId = region.id
+      currencyCode ??= region.currency_code?.toLowerCase() ?? null
+    }
+  }
   const s = req.scope.resolve<AiChatModuleService>(AI_CHAT_MODULE)
   const session = await s.createChatSessions({
     token_hash: hashToken(token),
     locale,
-    country_code: b.country_code ? b.country_code.toLowerCase() : null,
-    region_id: b.region_id && /^reg_[A-Za-z0-9]+$/.test(b.region_id) ? b.region_id : null,
-    currency_code: b.currency_code ? b.currency_code.toLowerCase() : null,
+    country_code: countryCode,
+    region_id: regionId,
+    currency_code: currencyCode,
     path_prefix: prefix,
     ip_hash: ip,
     page: cleanPage(b.page),
