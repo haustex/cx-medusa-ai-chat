@@ -1,6 +1,6 @@
 {
   "name": "medusa-ai-chat",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI shopping assistant for Medusa v2 storefronts: answers from real catalog, stock, prices and policies (never invented), streams, and hands over to a human on WhatsApp — by Haus Kayu",
   "author": "Haus Kayu <dev@hauskayu.com> (https://hauskayu.com)",
   "license": "MIT",

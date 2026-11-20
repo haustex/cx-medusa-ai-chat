@@ -119,6 +119,9 @@ its hash is stored; the IP address is stored as a salted hash for rate limiting 
 | `contact.hours` | | Per locale; shown next to the CS button and told to the model |
 | `knowledge.pages` | `{}` | topic → locale → URL of a page the `get_policy` tool may read (cached `cache_seconds`, cut at `max_chars`) |
 | `catalog.hide_when_metadata` | `["secret","hidden"]` | Products with such metadata set to true are never shown |
+| `catalog.language` | first locale | Language the catalog is written in; the model retries a failed search with words in it |
+| `catalog.translation_locales` | derived | Medusa translation locale per assistant locale (`{ en: "en-US" }`); default `<locale>-<COUNTRY>` of the market |
+| `catalog.fallback_scan` | `100` | When a search finds nothing, this many products are listed and matched by words (title, description, categories, metadata); `0` disables |
 | `shipping.enabled` | `true` | `shipping_estimate` tool; switches itself off when the zone-rate route is missing |
 | `limits` | see below | `max_message_chars` 1000, `max_turns` 20, `history_messages` 12, `summarize_after_tokens` 8000, `max_prompt_tokens` 30000, `max_output_tokens` 700, `max_tool_rounds` 4, `per_ip.hour` 30, `per_ip.day` 100, `per_session_minute` 6 |
 | `budget.daily_usd` | `1` | Spend cap per calendar day in `budget.timezone` (default UTC); the Admin setting overrides. Over the cap, visitors get the WhatsApp button only |

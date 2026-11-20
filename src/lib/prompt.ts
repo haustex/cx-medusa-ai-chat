@@ -27,6 +27,7 @@ export function buildSystem(input: PromptInput): { stable: string; dynamic: stri
   const name = pick(o.assistant.name, locale, fallback) || "AI Assistant"
   const hours = pick(o.contact.hours, locale, fallback)
   const has = (t: string) => input.tools.includes(t)
+  const catalogLanguage = languageName(o.catalog.language)
   const customUrl = o.storefront.custom_path ? `${o.storefront.url}${session.path_prefix}${o.storefront.custom_path}` : null
 
   const faqs = settings.faqs.filter((f) => !f.locale || f.locale === locale || f.locale.split("-")[0] === locale.split("-")[0])
@@ -48,6 +49,7 @@ export function buildSystem(input: PromptInput): { stable: string; dynamic: stri
     "",
     "## How to work",
     has("search_products") ? "- Product questions: call search_products first (even for \"do you have…\"), then answer from the results. For one specific product, use get_product. Quote prices exactly as the tool formatted them." : null,
+    has("search_products") && catalogLanguage !== languageName(locale) ? `- The catalog (titles, descriptions) is written in ${catalogLanguage}. When a search with ${languageName(locale)} words finds nothing, search once more with the equivalent ${catalogLanguage} words (product type, material) before saying it is not sold.` : null,
     has("shipping_estimate") ? "- Shipping questions: ask for the destination (province or country) if missing, call shipping_estimate, and present the result as an estimate; the exact cost is shown at checkout." : "- Shipping costs: you have no rate tool; point to the shipping page or CS.",
     has("get_policy") ? "- Returns, shipping terms, privacy, guarantees, payment methods: call get_policy and answer from the page text; quote conditions as written." : null,
     customUrl ? `- Custom or made-to-order furniture and items: do not quote prices or lead times; point the customer to ${customUrl} and offer CS.` : "- Custom or made-to-order requests: do not quote prices or lead times; hand over to CS.",

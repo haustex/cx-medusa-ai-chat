@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 — 2026-11-20
+
+- Search across languages: the native `q` only matches the untranslated title, so an English question on an
+  Indonesian catalog found nothing. Now the Store API gets the market's translation locale (`en-US`), a failed search
+  falls back to a word match over the listed products (title, description, categories, collection, metadata such as
+  `title_en`), and the model is told the catalog's language and to retry with words in it. Options
+  `catalog.language`, `catalog.translation_locales`, `catalog.fallback_scan`.
+- Sessions without `region_id` get the region from the country or currency, so prices still come back.
+
 ## 0.1.0 — 2026-11-20
 
 First release.

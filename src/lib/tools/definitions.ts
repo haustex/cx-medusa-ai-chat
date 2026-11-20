@@ -1,3 +1,4 @@
+import { languageName } from "../prompt"
 import type { ToolDef } from "../providers/types"
 import type { ToolContext } from "./context"
 import { policyTopics } from "./policies"
@@ -14,7 +15,7 @@ export function toolDefinitions(ctx: ToolContext): ToolDef[] {
     {
       name: "search_products",
       description: "Search the store catalog. Returns matching products with the price in the customer's currency, availability and a link. Call it for any question about what is sold, prices, sizes or stock. Never state a price you did not get from this tool or get_product.",
-      input_schema: obj({ query: { type: "string", description: "Search words in the customer's language (product type, material, use, size)" } }),
+      input_schema: obj({ query: { type: "string", description: `Search words (product type, material, use, size). The catalog is written in ${languageName(ctx.options.catalog.language)}: retry with words in that language when another language finds nothing` } }),
     },
     {
       name: "get_product",

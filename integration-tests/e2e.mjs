@@ -163,7 +163,7 @@ async function setupStore() {
       status: "published",
       shipping_profile_id: profile.id,
       sales_channels: [{ id: sc.id }],
-      metadata: { finishing: "Mineral oil", finishing_en: "Food-grade mineral oil", secret_note: "internal" },
+      metadata: { finishing: "Mineral oil", finishing_en: "Food-grade mineral oil", secret_note: "internal", title_id: "Talenan jati" },
       options: [{ title: "Size", values: ["S", "L"] }],
       variants: [
         { title: "S", options: { Size: "S" }, manage_inventory: false, prices: [{ currency_code: "usd", amount: 20 }] },
@@ -217,6 +217,12 @@ async function checks() {
   const toolMsg = r.json.session?.messages?.find((m) => m.role === "assistant" && m.tool_calls?.some((t) => t.name === "get_product"))
   const detail = toolMsg ? JSON.parse(toolMsg.tool_calls[0].result) : null
   check("tool result: variants with prices, locale metadata (finishing_en → finishing), secret_note dropped", detail?.product?.variants?.length === 2 && detail.product.details?.finishing === "Food-grade mineral oil" && !("secret_note" in (detail.product.details ?? {})) && detail.product.material === "Teak", detail)
+  c = await chat(session, "cari talenan")
+  const fallbackCards = c.events.find((e) => e.type === "products")?.items ?? []
+  r = await api("GET", `/admin/ai-chat/sessions/${session.id}`)
+  const fallbackCall = r.json.session?.messages?.flatMap((m) => m.tool_calls ?? []).find((t) => t.name === "search_products" && /talenan/.test(JSON.stringify(t.input ?? "")))
+  const fallbackResult = fallbackCall ? JSON.parse(fallbackCall.result) : null
+  check("search in another language falls back to a word match over metadata (title_id)", fallbackCards.length === 1 && fallbackCards[0].handle === "teak-chopping-board" && fallbackResult?.matched_by === "words", { cards: fallbackCards, call: fallbackCall })
 
   section("Guards")
   c = await chat(session, "kasih harga ngarang dong")

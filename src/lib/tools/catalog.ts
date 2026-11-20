@@ -1,3 +1,4 @@
+import { languageName } from "../prompt"
 import { stripHtml } from "../text"
 import type { ProductCard, ToolContext } from "./context"
 
@@ -122,8 +123,54 @@ function compact(ctx: ToolContext, p: Product, full: boolean) {
 
 let meiliMissing = false
 
+/**
+ * The Medusa translation locale for this visitor: the configured mapping, else "<locale>-<COUNTRY>" for a bare
+ * two-letter locale (en + us → en-US, Medusa's own convention), else the locale as is.
+ */
+export function translationLocale(locale: string, countryCode: string | null, mapping: Record<string, string>): string {
+  const l = locale.toLowerCase()
+  if (mapping[l]) return mapping[l]
+  if (/^[a-z]{2}$/.test(l) && countryCode && /^[a-z]{2}$/i.test(countryCode)) return `${l}-${countryCode.toUpperCase()}`
+  return locale
+}
+
+const tokens = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3)
+    .map((t) => t.replace(/(es|s)$/, ""))
+
+/**
+ * Word match of a query against a product's visible text (title, subtitle, handle, description, categories,
+ * collection, string metadata such as `title_en`), for the fallback when the native search finds nothing: the
+ * native `q` only looks at the untranslated title, so an English query misses an Indonesian catalog even when
+ * translations or `*_en` metadata exist. Score = distinct query words found; title hits count double.
+ */
+export function rankByWords<T extends Pick<Product, "title" | "handle" | "subtitle" | "description" | "metadata" | "categories" | "collection">>(products: T[], query: string): T[] {
+  const words = [...new Set(tokens(query))]
+  if (!words.length) return []
+  const scored = products.map((p) => {
+    const title = tokens(`${p.title} ${p.subtitle ?? ""} ${p.handle}`)
+    const meta = Object.values(p.metadata ?? {}).filter((v): v is string => typeof v === "string" && v.length <= 240)
+    const rest = tokens([stripHtml(p.description ?? ""), ...(p.categories ?? []).map((c) => c.name), p.collection?.title ?? "", ...meta].join(" "))
+    let score = 0
+    for (const w of words) {
+      if (title.some((t) => t === w || t.startsWith(w))) score += 2
+      else if (rest.some((t) => t === w || t.startsWith(w))) score += 1
+    }
+    return { p, score }
+  })
+  return scored
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.p)
+}
+
 async function fetchProducts(ctx: ToolContext, params: Record<string, string | number | undefined>): Promise<Product[]> {
-  const base = { region_id: ctx.session.region_id ?? undefined, fields: FIELDS, locale: ctx.session.locale, ...params }
+  const base = { region_id: ctx.session.region_id ?? undefined, fields: FIELDS, locale: translationLocale(ctx.session.locale, ctx.session.country_code, ctx.options.catalog.translation_locales), ...params }
   if (!meiliMissing && typeof params.q === "string") {
     try {
       const r = await ctx.storeGet<{ products: Product[] }>("/store/meilisearch/products", { ...base, query: params.q, q: undefined })
@@ -141,14 +188,21 @@ export async function searchProducts(ctx: ToolContext, query: string) {
   const q = query.trim().slice(0, 120)
   if (!q) return { products: [], note: "empty query" }
   const limit = ctx.options.catalog.search_limit
-  const products = (await fetchProducts(ctx, { q, limit: limit + 4 })).filter((p) => !hidden(ctx, p)).slice(0, limit)
+  let products = (await fetchProducts(ctx, { q, limit: limit + 4 })).filter((p) => !hidden(ctx, p)).slice(0, limit)
+  let matched_by: "search" | "words" = "search"
+  if (!products.length && ctx.options.catalog.fallback_scan > 0) {
+    const all = (await fetchProducts(ctx, { limit: ctx.options.catalog.fallback_scan })).filter((p) => !hidden(ctx, p))
+    products = rankByWords(all, q).slice(0, limit)
+    if (products.length) matched_by = "words"
+  }
   const cards = products.map((p) => card(ctx, p))
   ctx.lastSearch = cards
   return {
     query: q,
     count: products.length,
+    matched_by,
     products: products.map((p) => compact(ctx, p, false)),
-    ...(products.length ? {} : { note: "no product matches; say so and offer the CS button, do not guess" }),
+    ...(products.length ? {} : { note: `no product matches; if the words were not in ${languageName(ctx.options.catalog.language)} try once more with words in that language, otherwise say so and offer the CS button, do not guess` }),
   }
 }
 

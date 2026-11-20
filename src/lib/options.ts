@@ -82,6 +82,21 @@ export type PluginOptions = {
     hide_when_metadata?: string[]
     /** Search results per call. Default 5 (max 8). */
     search_limit?: number
+    /**
+     * Language the catalog (titles, descriptions) is written in, e.g. "id". The model is told to retry a failed
+     * search with words in that language. Default: the first assistant locale.
+     */
+    language?: string
+    /**
+     * Medusa translation locale per assistant locale, e.g. { en: "en-US" }: sent as `locale` to the Store API so
+     * translated titles come back. Default: "<locale>-<MARKET COUNTRY>" for a two-letter locale (en + US → en-US).
+     */
+    translation_locales?: Record<string, string>
+    /**
+     * When a search finds nothing, this many products are listed (in the customer's locale) and matched by words
+     * against title, description, categories, collection and metadata. Default 100; 0 disables.
+     */
+    fallback_scan?: number
   }
   shipping?: {
     /** Offer the `shipping_estimate` tool (needs medusa-fulfillment-zone-rate). Default true; off automatically when the route is missing. */
@@ -139,7 +154,7 @@ export type ResolvedOptions = {
   assistant: { name: LocaleText; greeting: LocaleText; locales: string[]; instructions: string }
   contact: { whatsapp: string | null; hours: LocaleText; email: string | null }
   knowledge: { pages: Record<string, LocaleText>; cache_seconds: number; max_chars: number }
-  catalog: { hide_when_metadata: string[]; search_limit: number }
+  catalog: { hide_when_metadata: string[]; search_limit: number; language: string; translation_locales: Record<string, string>; fallback_scan: number }
   shipping: { enabled: boolean }
   limits: {
     max_message_chars: number
@@ -239,6 +254,9 @@ export function resolveOptions(raw: PluginOptions | undefined, secret: string): 
     catalog: {
       hide_when_metadata: Array.isArray(o.catalog?.hide_when_metadata) ? o.catalog.hide_when_metadata.map(String) : ["secret", "hidden"],
       search_limit: num(o.catalog?.search_limit, 5, 1, 8),
+      language: typeof o.catalog?.language === "string" && o.catalog.language.trim() ? o.catalog.language.trim().toLowerCase() : locales[0],
+      translation_locales: Object.fromEntries(Object.entries(o.catalog?.translation_locales ?? {}).filter(([k, v]) => typeof v === "string" && v.trim()).map(([k, v]) => [k.toLowerCase(), (v as string).trim()])),
+      fallback_scan: num(o.catalog?.fallback_scan, 100, 0, 500),
     },
     shipping: { enabled: o.shipping?.enabled !== false },
     limits: {
