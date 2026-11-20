@@ -9,6 +9,7 @@
 //   node integration-tests/e2e.mjs
 //
 // AC_PG_CONTAINER: name of the Postgres container (default ac-spike-pg). AC_KEEP=1 keeps the server running.
+// AC_DB / AC_PORT: database name (ac_e2e) and port (9800), e.g. to run the suite next to a kept demo server.
 // Every medusa command goes through scripts/guard.mjs (ac-spike-* containers and ports 9800+ only).
 import { spawn, spawnSync } from "node:child_process"
 import fs from "node:fs"
@@ -23,9 +24,9 @@ const GUARD = path.join(PLUGIN_DIR, "scripts/guard.mjs")
 const MEDUSA = path.join(PLUGIN_DIR, "node_modules/.bin/medusa")
 const PACKAGE = "medusa-ai-chat"
 
-const DB_NAME = "ac_e2e"
+const DB_NAME = process.env.AC_DB || "ac_e2e"
 const PG_CONTAINER = process.env.AC_PG_CONTAINER || "ac-spike-pg"
-const PORT = 9800
+const PORT = Number(process.env.AC_PORT || 9800)
 const BASE = `http://127.0.0.1:${PORT}`
 const ADMIN = { email: "admin@e2e.test", password: "e2e-password-123" }
 
@@ -191,9 +192,11 @@ async function checks() {
   }
 
   section("Config and consent")
-  let r = await api("GET", "/store/ai-chat/config?locale=id", { store: true })
+  let r = await api("GET", "/store/ai-chat/config?lang=id", { store: true })
   check("config: enabled, name, greeting, hours, whatsapp for the locale", r.status === 200 && r.json.enabled === true && r.json.name === "Asisten AI Haus Kayu" && r.json.greeting === "Halo! Ada yang bisa dibantu?" && /WIB/.test(r.json.hours) && r.json.whatsapp === "6285111663330" && r.json.over_budget === false, r.json)
-  r = await api("GET", "/store/ai-chat/config?locale=fr", { store: true })
+  r = await api("GET", "/store/ai-chat/config?lang=en", { store: true })
+  check("config: second locale gets its own name, greeting and hours", r.json.locale === "en" && r.json.name === "Haus Kayu AI Assistant" && r.json.greeting === "Hi! How can I help?" && /WIB/.test(r.json.hours), r.json)
+  r = await api("GET", "/store/ai-chat/config?lang=fr", { store: true })
   check("config: unknown locale falls back to the first one", r.json.locale === "id" && r.json.name === "Asisten AI Haus Kayu", r.json)
   r = await api("POST", "/store/ai-chat/sessions", { body: { locale: "en", consent: false }, store: true })
   check("session needs consent: true", r.status === 400, r.json)
@@ -272,7 +275,7 @@ async function checks() {
   await sleep(100)
   c = await chat(session, "hello again")
   check("over budget → error event before any text", c.error?.code === "over_budget" && c.text === "", c)
-  r = await api("GET", "/store/ai-chat/config?locale=en", { store: true })
+  r = await api("GET", "/store/ai-chat/config?lang=en", { store: true })
   check("config reports over_budget", r.json.over_budget === true, r.json)
   r = await api("GET", "/admin/ai-chat/stats?days=7")
   check("stats: today's spend > 0, handoffs 2, refused 1, flagged 1, thumbs down 1", r.json.today.cost_usd > 0 && r.json.totals.handoffs === 2 && r.json.totals.refused === 1 && r.json.totals.flagged >= 1 && r.json.totals.feedback_down === 1 && r.json.totals.sessions === 2, r.json)
@@ -292,7 +295,7 @@ async function checks() {
   r = await api("POST", "/admin/ai-chat/settings", { body: { greeting: { id: "Halo Kak!", en: "Hello!" }, instructions: "Sapa dengan Kak.", faqs: [{ question: "Bisa COD?", answer: "Belum bisa.", locale: "id" }] } })
   check("settings saved with FAQ ids", r.json.settings.greeting.id === "Halo Kak!" && r.json.settings.faqs[0].id.length > 0, r.json)
   await sleep(100)
-  r = await api("GET", "/store/ai-chat/config?locale=id", { store: true })
+  r = await api("GET", "/store/ai-chat/config?lang=id", { store: true })
   check("storefront config uses the Admin greeting", r.json.greeting === "Halo Kak!", r.json)
   r = await api("GET", "/admin/ai-chat/sessions?handoff=true")
   check("sessions filter handoff=true", r.json.count === 2 && r.json.sessions.every((s) => s.handoff_at), r.json)

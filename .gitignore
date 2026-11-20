@@ -35,3 +35,4 @@ integration-tests/app/private
 integration-tests/.state
 integration-tests/app/node_modules
 integration-tests/app/.medusa
+integration-tests/app/static

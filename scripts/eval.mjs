@@ -40,7 +40,7 @@ const PROMPTS = {
 }
 
 const headers = { "content-type": "application/json", "x-publishable-api-key": pk }
-const config = await (await fetch(`${base}/store/ai-chat/config?locale=${locale}`, { headers })).json()
+const config = await (await fetch(`${base}/store/ai-chat/config?lang=${locale}`, { headers })).json()
 console.log("config:", JSON.stringify(config))
 if (!config.enabled) process.exit(1)
 

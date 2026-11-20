@@ -86,7 +86,7 @@ Storefront integration: `GET /store/ai-chat/config`, `POST /store/ai-chat/sessio
 
 | Route | Purpose |
 | --- | --- |
-| `GET /store/ai-chat/config?locale=` | `enabled`, `over_budget`, name, greeting, CS hours, WhatsApp number, privacy path, limits |
+| `GET /store/ai-chat/config?lang=` | `enabled`, `over_budget`, name, greeting, CS hours, WhatsApp number, privacy path, limits |
 | `POST /store/ai-chat/sessions` | `{ locale, country_code?, region_id?, currency_code?, path_prefix?, page?, consent: true }` → `{ session: { id, token, turns_left } }` |
 | `POST /store/ai-chat/sessions/:id/messages` | `{ token, message, page? }` → SSE: `start`, `delta`, `products`, `handoff`, `notice`, `done`, or `error` |
 | `POST /store/ai-chat/sessions/:id/handoff` | `{ token }` → the WhatsApp link for the "Chat with CS" button (summary of the conversation) |
@@ -99,7 +99,7 @@ its hash is stored; the IP address is stored as a salted hash for rate limiting 
 ### Admin API
 
 `GET/POST /admin/ai-chat/settings`, `GET /admin/ai-chat/config`, `GET /admin/ai-chat/stats?days=`,
-`GET /admin/ai-chat/sessions` (filters `handoff`, `feedback`, `flagged`, `locale`, `q`), `GET|DELETE /admin/ai-chat/sessions/:id`.
+`GET /admin/ai-chat/sessions` (filters `handoff`, `feedback`, `flagged`, `lang`, `q`), `GET|DELETE /admin/ai-chat/sessions/:id`.
 
 ### Options
 

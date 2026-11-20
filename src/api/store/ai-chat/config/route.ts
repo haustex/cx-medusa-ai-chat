@@ -7,13 +7,15 @@ import { getSettings } from "../../../../lib/settings"
 
 /**
  * What the storefront needs before the first message: whether the assistant is on, its name, greeting, CS hours
- * and the consent notice. No secrets, cacheable for a minute by the storefront.
+ * and the consent notice (`?lang=`). No secrets, cacheable for a minute by the storefront.
  */
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   noStore(res)
   const o = getOptions(req.scope)
   const settings = await getSettings(req.scope)
-  const locale = typeof req.validatedQuery?.locale === "string" && o.assistant.locales.includes(req.validatedQuery.locale) ? req.validatedQuery.locale : o.assistant.locales[0]
+  // `lang`, not `locale`: Medusa strips a `locale` query parameter from store requests (Translation Module)
+  const requested = (req.validatedQuery?.lang ?? req.query?.lang) as unknown
+  const locale = typeof requested === "string" && o.assistant.locales.includes(requested) ? requested : o.assistant.locales[0]
   const fallback = o.assistant.locales[0]
   const enabled = settings.enabled && providerReady(req.scope)
   const over = enabled ? await overBudget(req.scope, o, settings) : false

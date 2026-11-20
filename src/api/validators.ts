@@ -31,7 +31,7 @@ export const StoreFeedback = z.object({
 })
 export type StoreFeedbackType = z.infer<typeof StoreFeedback>
 
-export const StoreConfigQuery = z.object({ locale: z.string().max(10).optional() })
+export const StoreConfigQuery = z.object({ lang: z.string().max(10).optional() })
 
 const faq = z.object({ id: z.string().max(64).optional(), question: z.string().min(1).max(500), answer: z.string().min(1).max(4000), locale: z.string().max(10).nullable().optional() })
 
@@ -50,7 +50,7 @@ export const AdminListSessions = z.object({
   handoff: z.enum(["true", "false"]).optional(),
   feedback: z.enum(["up", "down", "any"]).optional(),
   flagged: z.enum(["true"]).optional(),
-  locale: z.string().max(10).optional(),
+  lang: z.string().max(10).optional(),
   q: z.string().max(200).optional(),
 })
 export type AdminListSessionsType = z.infer<typeof AdminListSessions>

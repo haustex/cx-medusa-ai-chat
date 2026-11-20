@@ -67,7 +67,7 @@ export const getConfig = () => sdk.client.fetch<Config>("/admin/ai-chat/config")
 export const getSettings = () => sdk.client.fetch<{ settings: Settings }>("/admin/ai-chat/settings")
 export const updateSettings = (body: Partial<Omit<Settings, "id" | "updated_at">>) => sdk.client.fetch<{ settings: Settings }>("/admin/ai-chat/settings", { method: "POST", body })
 export const getStats = (days: number) => sdk.client.fetch<Stats>("/admin/ai-chat/stats", { query: { days } })
-export type SessionFilters = { handoff?: "true" | "false"; feedback?: "up" | "down" | "any"; flagged?: "true"; q?: string; locale?: string }
+export type SessionFilters = { handoff?: "true" | "false"; feedback?: "up" | "down" | "any"; flagged?: "true"; q?: string; lang?: string }
 export const listSessions = (filters: SessionFilters, limit: number, offset: number) =>
   sdk.client.fetch<{ sessions: SessionRow[]; count: number }>("/admin/ai-chat/sessions", { query: { ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v)), limit, offset } })
 export const getSession = (id: string) => sdk.client.fetch<{ session: SessionDetail }>(`/admin/ai-chat/sessions/${id}`)

@@ -38,3 +38,8 @@ This host also runs the **hauskayu.com production store**.
 - Order tracking tool (e-mail + order number verification), product recommendations, analytics of questions the
   assistant could not answer (phase 2).
 - Native Redis counter for the daily budget (today read-modify-write).
+
+## Gotchas
+
+- Store routes must not use a `locale` query parameter: Medusa's framework consumes it (Translation Module) and
+  the route sees an empty query. The config route takes `?lang=`.

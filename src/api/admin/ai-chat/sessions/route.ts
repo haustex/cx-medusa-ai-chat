@@ -12,7 +12,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   const filters: Record<string, unknown> = {}
   if (q.handoff === "true") filters.handoff_at = { $ne: null }
   if (q.handoff === "false") filters.handoff_at = null
-  if (q.locale) filters.locale = q.locale
+  if (q.lang) filters.locale = q.lang
   if (q.feedback || q.flagged || q.q) {
     const mf: Record<string, unknown> = {}
     if (q.feedback === "up") mf.feedback = 1
