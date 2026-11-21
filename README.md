@@ -23,6 +23,23 @@ pernah tampil.
 [![Medusa](https://img.shields.io/badge/Medusa-2.19%20%E2%80%93%202.22-7c3aed)](https://medusajs.com)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+### Screenshots
+
+Admin → AI Assistant (demo store, example conversations) and the chat panel of a storefront (Kiln, the theme of
+hauskayu.com).
+
+| Overview: today's spend against the daily budget, 30-day counts | Conversations: filters, cost, handover and thumbs per chat |
+| --- | --- |
+| ![Admin overview](https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/screenshots/admin-overview.png) | ![Admin conversations](https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/screenshots/admin-conversations.png) |
+
+| A conversation: tools called, tokens, cost, WhatsApp handover | Settings: switch, budget, greeting per language, extra instructions, FAQ |
+| --- | --- |
+| ![Admin conversation](https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/screenshots/admin-conversation.png) | ![Admin settings](https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/screenshots/admin-settings.png) |
+
+| Storefront, phone (Indonesian): answer with a product card | Storefront, desktop (English): handover to WhatsApp |
+| --- | --- |
+| ![Storefront phone](https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/screenshots/storefront-phone-id.png) | ![Storefront desktop](https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/screenshots/storefront-desktop-en.png) |
+
 ### Compatibility
 
 | Plugin | Medusa | Node | Tested in CI on |
