@@ -1,8 +1,8 @@
 <p align="center">
   <a href="https://hauskayu.com">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
-      <img src="docs/logo.svg" alt="Haus Kayu" width="260">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/logo-dark.svg">
+      <img src="https://raw.githubusercontent.com/haustex/cx-medusa-ai-chat/main/docs/logo.svg" alt="Haus Kayu" width="260">
     </picture>
   </a>
 </p>
@@ -152,6 +152,42 @@ its hash is stored; the IP address is stored as a salted hash for rate limiting 
 With Claude Haiku 5.5 the stable prompt (rules + tools, ≈2,500 tokens) is read from the prompt cache after the
 first call of a 5-minute window; a typical turn with one tool call costs about $0.0005–0.001, a six-turn
 conversation $0.003–0.006. Cache writes, cache reads, input and output are all counted against the daily budget.
+
+### Other model calls on the same budget
+
+Other features of the store that call a model with the same key (a search rewrite, a description helper) can share
+the assistant's daily budget, Admin statistics, rate limiter and price list through `medusa-ai-chat/budget`, the only
+public server API of the package (everything else is internal):
+
+```ts
+import { budgetStatus, clientIp, ipHash, rateLimits, recordUsage, takeRateLimit } from "medusa-ai-chat/budget"
+
+// in an API route
+const status = await budgetStatus(req.scope, { feature: "search", share: 0.3 })
+if (status.over_budget) return res.json({ terms: [] }) // the assistant keeps the other 70 %
+
+const { per_ip } = rateLimits(req.scope)
+const ip = ipHash(req.scope, clientIp(req))
+if (!(await takeRateLimit(req.scope, `search:h:${ip}`, per_ip.hour, 3600))) return res.status(429).end()
+
+const message = await anthropic.messages.create({ /* … */ })
+await recordUsage(req.scope, {
+  model: "claude-haiku-5-5",
+  feature: "search",
+  usage: { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens },
+})
+```
+
+| Export | |
+| --- | --- |
+| `budgetStatus(container, { feature?, share? })` | Today's cap, total spend, the feature's spend and cap, `over_budget` (total reached the cap, or the feature its `share` of it) |
+| `recordUsage(container, { usage, model?, feature? })` | Adds a call to today's usage row and the feature counter; returns the cost in USD |
+| `pricingFor(container, model?)` / `costOf(usage, pricing)` | USD per million tokens (the `pricing` option for the assistant's model, else published prices) and the cost of one call |
+| `rateLimits(container)` / `takeRateLimit(container, key, max, windowSeconds)` | The assistant's per-IP limits and a fixed-window counter through the Cache Module, namespaced apart from the assistant's own |
+| `clientIp(req)` / `ipHash(container, ip)` | The visitor's address (Cloudflare header first) and its salted hash for rate-limit keys |
+
+Feature counters live in the Cache Module (Redis when the store has it) for two days; the daily total is the
+persistent usage row the assistant itself reads.
 
 ### Privacy
 

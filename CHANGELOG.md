@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — 2026-11-21
+
+- `medusa-ai-chat/budget`: public API for other model calls in the store (a search rewrite, …). They share the daily
+  budget and Admin statistics (`recordUsage`), can be held to a share of it per feature (`budgetStatus` with
+  `feature` + `share`, so the assistant keeps the rest), and use the assistant's price list, rate limiter and IP hash.
+- README: screenshots of the Admin page and the storefront panel; logo from an absolute URL so npmjs.com shows it.
+
 ## 0.1.1 — 2026-11-20
 
 - Search across languages: the native `q` only matches the untranslated title, so an English question on an
